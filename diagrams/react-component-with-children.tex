@@ -1,0 +1,44 @@
+\documentclass{article}
+\usepackage[margin=.5in, landscape]{geometry}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+\usepackage{mathtools}
+\usepackage{setspace}
+\definecolor{light-gray}{gray}{.3}
+
+\newcommand{\textBrace}[2]{%
+    $\underbrace{\text{\Huge#1}}_{\text{\Large#2}}$%
+}
+
+\setlength{\parindent}{0pt}
+\begin{document}
+\setstretch{3}
+
+\vspace*{\fill}
+    {
+        \Huge
+        \color{light-gray}
+        \texttt{%
+<Form>\hspace*{\fill}\\ % Opening Tag
+%\parbox{\linewidth}{%
+    \hspace*{1em}\mbox{<RadioButtons options={[1,2,3]}/>}\\
+    \hspace*{1em}\mbox{<input type="text" value="meaningful"/>}\\
+%}
+</Form> 
+        }
+    }
+
+\
+\vspace*{\fill}
+
+\vspace{\baselineskip}
+\noindent
+\begin{minipage}[t][][t]{\linewidth}
+    \Huge
+    \texttt{%
+<RadioButtons options={[1,2,3]}/>\\
+<input type="text" value="meaningful"/>\\
+}
+\end{minipage}
+
+\end{document}
+

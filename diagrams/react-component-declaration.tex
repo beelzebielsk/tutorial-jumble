@@ -1,0 +1,24 @@
+\documentclass{article}
+\usepackage[margin=.5in, landscape]{geometry}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+\usepackage{mathtools}
+\definecolor{light-gray}{gray}{.3}
+
+\newcommand{\textBrace}[2]{%
+    $\underbrace{\text{\Huge#1}}_{\text{\Large#2}}$%
+}
+%\usepackage{amsmath}
+\begin{document}
+
+\vspace*{\fill}
+\begin{center}
+    {
+        \Huge
+        \color{light-gray}
+        \texttt{<\textBrace{RadioButtons}{Element Name}
+                 \textBrace{options}{Property Name}=\{\textBrace{["one", "two", "three"]}{Property Value}\}/>}
+    }
+\end{center}
+\vspace*{\fill}
+
+\end{document}
