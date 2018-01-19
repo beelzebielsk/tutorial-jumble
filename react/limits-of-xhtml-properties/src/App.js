@@ -8,11 +8,24 @@ const printAttributes = (event) => {
     if (event.currentTarget.hasAttributes()) {
         attributes = event.currentTarget.attributes;
         console.log("The collection of attributes on the element:");
+        // How to search through all of the attributes. Attributes can
+        // be indexed both with numbers, and with the name of the
+        // attribute. Here, we index with numbers.
+        // NOTE: Despite having a `length` property, and being
+        // indexable with numbers, `attributes` is not an array, so
+        // you cannot use array methods/properties with it.
         for (let i = 0; i < attributes.length; i++) {
             console.log(`${attributes[i].name} : ${attributes[i].value}`);
         }
     }
+
 };
+
+const printWackyProp = (event) => {
+    // Accessing a specific attribute of an element.
+    console.log("Value of the wackyprop attribute, specifically:",
+                event.currentTarget.attributes.wackyprop.value);
+}
 
 // This is a component that just places a special onClick function on
 // onto a div, and then places all the passed properties onto the div,
@@ -29,7 +42,7 @@ const NewComponent = (props) => {
 const CustomAttributeComponent = () => {
     return (
         <div 
-            onClick={printAttributes} 
+            onClick={event => {printAttributes(event); printWackyProp(event);} } 
             wackyprop="some value" 
             anypropnameatall="another value">
             some children text
@@ -41,7 +54,7 @@ class App extends Component {
   render() {
     return (
         <div>
-            <h4 style={{"max-width": "30em"}}>
+            <h4 style={{"maxWidth": "30em"}}>
                 To create custom properties on an XHTML element from
                 React, you must place the property on the component like any
                 other property, but the property name must be all lowercase
@@ -64,7 +77,7 @@ class App extends Component {
             <NewComponent id={4} wackyprop={{a:1}}>
                 Component 4
             </NewComponent>
-            <NewComponent id={4} wackyprop="a string" anypropnameatall={[1, 2, 3]}>
+            <NewComponent id={5} wackyprop="a string" anypropnameatall={[1, 2, 3]}>
                 Component 5
             </NewComponent>
         </div>
