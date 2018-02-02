@@ -83,8 +83,9 @@ Let's start with the plain, obvious differences:
 
 - The normal react version just has two state changing methods:
   `increment` and `decrement`.
-- The redux-ish version has one state changing method, and `increment`
-  and `decrement` have been replaced with something else.
+- The redux-ish version has one state changing method called
+  `dispatch`, and `increment` and `decrement` have been replaced with
+  something else.
 
 Okay, how do these differences relate to the quote from the article?
 
