@@ -11,55 +11,49 @@ app.get('/', function(req, res){
     res.sendFile(__dirname + '/index.html');
 });
 
-let rooms = {
-    1 : io.of('/room1'),
-    2 : io.of('/room2'),
-};
+let rooms = {};
 
-let chatLogs = {
-    1 : [],
-    2 : [],
+function createRoom({name}) {
+    return {
+        name,
+        messages: [],
+        users: [],
+    };
 }
 
-for (let room in rooms) {
-    console.log('a user connected to room', room);
-    rooms[room].on('connection', function (socket) {
-        socket.on('disconnect', function () {
-            console.log('a user disconnected from room', room);
-        });
-        socket.on('chat message', function(data) {
-            console.log(`Received message (${room}):`, data);
-            chatLogs[room].push(data);
-            rooms[room].emit('chat message', data);
-        });
-        // Totally optional. You can ignore this if you want to, I
-        // just threw this in here in case you wanted to see how it
-        // could kinda get done. The concept wouldn't change from
-        // this, just the implementation.
-        // In reality, some sort of persistent storage would be used
-        // because...
-        // - Not everyone cares about history.
-        // - No one needs all the history immediately. They can just
-        //   start from wherever the chat currently is, and scrolling
-        //   upward could cause an event to fire which fetches
-        //   previous 50 messages or so.
-        // - Storing all the history in memory is a really bad idea.
-        //   Memory (RAM) is small, storage (Hard Disk) is big. If the
-        //   average message is 100 characters long, and there's 100
-        //   rooms, and there's eventually around 10000 messages per
-        //   room, you've already got to store roughly 10 ** (2 + 2 +
-        //   4) = 10 ** 8 = 100 million bytes (100 MB). That's a
-        //   no-no.
-        for (let message of chatLogs[room]) {
-            socket.emit('chat message', message);
-        }
+function joinRoom(socket, roomName, nickname) {
+    let room = rooms[roomName];
+    if (!room) {
+        room = createRoom({name:roomName});
+        rooms[roomName] = room;
+    }
+    socket.join(roomName);
+    socket.on('chat message', function(message) {
+        console.log(`Received message (${roomName}):`, message);
+        io.to(roomName).emit('chat message', message);
+        room.messages.push(message);
     });
+    /* Give chat history to new users. */
+    for (let message of room.messages) {
+        socket.emit('chat message', message);
+    }
 }
+
+io.on('connection', function(socket) {
+    console.log("A user connected to server.");
+    socket.on('join room', function (roomName) {
+        console.log("A user connected to room", roomName);
+        joinRoom(socket, roomName);
+
+        socket.on('disconnect', function () {
+            console.log('a user disconnected from room', roomName);
+        });
+    });
+});
 
 http.listen(3000, function(){
     console.log('listening on *:3000');
 });
-    
 
 /*
  * - If a client connects to the root, then it seems that they connect
