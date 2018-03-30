@@ -13,10 +13,25 @@ app.get('/', function(req, res){
 
 let rooms = {};
 
+/* I didn't require/import this because I dunno how to have code that
+ * can be both required by NodeJS and imported from browser JS. Maybe
+ * that's using something like webpack? If you can do better, do so.
+ */
+function createLimitedArray(limit) {
+    let arr = [];
+    arr.limit = limit;
+    arr.add = function(element) {
+        arr.push(element);
+        if (arr.length > arr.limit) arr.shift();
+    };
+    return arr;
+}
+const messageLimit = 20;
+
 function createRoom({name}) {
     return {
         name,
-        messages: [],
+        messages: createLimitedArray(messageLimit),
         users: {},
     };
 }
@@ -69,7 +84,7 @@ function sendMessageTo(socket, sender, message, roomName) {
             user.strikes = strikes;
         }
     }
-    room.messages.push(finalMessage);
+    room.messages.add(finalMessage);
     io.to(roomName).emit('chat message', finalMessage);
 }
 
@@ -93,14 +108,17 @@ function joinRoom(socket, roomName, nickname) {
     });
     socket.emit('join succeed');
 
-    /* I moved this here because the event listeners should only be
-     * placed on a successful join. Otherwise, if someone failed to
-     * join over and over again, we'd keep putting event listeners for
-     * disconnect, despite not needing all of them.
+    /* I moved this here because the event listeners for chatting
+     * should only be placed on a successful join. Otherwise, if
+     * someone failed to join over and over again, we'd keep putting
+     * event listeners for disconnect, despite not needing all of
+     * them (I actually had this problem).
      */
     socket.on('disconnect', function () {
         console.log(nickname, 'disconnected from', roomName);
         io.to(roomName).emit('chat message', `${nickname} has left.`);
+        /* Don't do this if you want to keep records of who's banned.
+         */
         delete room.users[nickname];
     });
 

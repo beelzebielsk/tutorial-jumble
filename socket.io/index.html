@@ -36,8 +36,27 @@
     </form>
 
     <script>
+        /* I didn't require/import this because I dunno how to have
+         * code that can be both required by NodeJS and imported from
+         * browser JS. Maybe that's using something like webpack? If
+         * you can do better, do so.
+         */
+        function createLimitedArray(limit) {
+            let arr = [];
+            arr.limit = limit;
+            arr.add = function(element) {
+                arr.push(element);
+                if (arr.length > arr.limit) arr.shift();
+            };
+            return arr;
+        }
+    </script>
+
+    <script>
         $(function () {
             var socket = io();
+            let messageLimit = 20;
+            let messages = createLimitedArray(messageLimit);
             function joinRoom(roomName, nickname) {
                 socket.emit('join room', roomName, nickname);
                 /* This only fires once, and then this listener no
@@ -69,8 +88,15 @@
                 $('#m').val('');
                 e.preventDefault();
             });
+            /* In react, this callback would set the state of a list
+            of messages, trigger a rerender, and cause something like
+            `<Messages list={messages} />`.
+            */
             socket.on('chat message', function (message) {
-                $('#messages').append($('<li>').text(message));
+                messages.add(message);
+                $('#messages').html(
+                    messages.map(message => $('<li>').text(message))
+                );
             });
             socket.on('join fail', function (reason) {
                 $('#roomSelector .error').text(reason);
