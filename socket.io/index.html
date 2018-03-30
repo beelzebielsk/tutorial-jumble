@@ -12,7 +12,7 @@
       #messages li { padding: 5px 10px; }
       #messages li:nth-child(odd) { background: #eee; }
       #chatWindow { display:none }
-      h2 
+      .error { color: red; }
     </style>
   </head>
   <body>
@@ -29,6 +29,10 @@
 
     <form id=roomSelector action="">
         <input type=text id=room placeholder="Enter room name" />
+        <input type=text id=nick placeholder="Enter nickname" />
+        <input type=submit />
+        <br />
+        <p class=error></p>
     </form>
 
     <script>
@@ -36,9 +40,29 @@
             var socket = io();
             function joinRoom(roomName, nickname) {
                 socket.emit('join room', roomName, nickname);
-                $('#roomSelector').hide();
-                $('#chatWindow').show();
-                $('#roomIndicator').html("Room " + roomName);
+                /* This only fires once, and then this listener no
+                 * longer listens for 'join succeed'. I realize this
+                 * looks odd, I needed roomName in the scope of the event
+                 * listener for 'join succeed', but I didn't want to keep
+                 * adding event listeners every time I called joinRoom...
+                 * though I really only call this function once per
+                 * browser tab. Hm. I supose it didn't matter in the
+                 * end.
+                 */
+                socket.once('join succeed', function() {
+                    $('#roomSelector').hide();
+                    $('#chatWindow').show();
+                    $('#roomIndicator').html("Room " + roomName);
+                });
+
+                /* This means you were kicked. */
+                socket.once('disconnect', function() {
+                    $('#chatWindow').hide();
+                    $('#roomSelector').show();
+                    $('#roomSelector .error').text(
+                        "You were kicked from " + roomName
+                    );
+                });
             }
             $('#compose').submit(function(e){
                 socket.emit('chat message', $('#m').val());
@@ -48,8 +72,13 @@
             socket.on('chat message', function (message) {
                 $('#messages').append($('<li>').text(message));
             });
+            socket.on('join fail', function (reason) {
+                $('#roomSelector .error').text(reason);
+            });
+
             $('#roomSelector').submit(function(e) {
                 var room = $('#room').val();
+                var nickname = $('#nick').val();
                 joinRoom(room, nickname);
                 e.preventDefault();
             });
