@@ -16,6 +16,12 @@ function* bubbleSort(array, test, swap) {
 }
 
 
+function ArithmeticProgression(start, stepSize, steps) {
+    return Array(steps).fill(0).reduce(
+        (prev, _, index) => {prev[index] = start + index*stepSize; return prev;},
+        []
+    );
+}
 function Element(props) {
     let style = {
         position : 'absolute',
@@ -23,29 +29,29 @@ function Element(props) {
         border : "solid #333",
         padding : "10px",
         transitionProperty : "top",
-        transitionDuration : "1.5s",
+        transitionDuration : (props.transitionDuration ?
+            `${props.transitionDuration}s` : ".2s") ,
     }
     return <span style={style}>{props.children}</span>
 }
-function ArithmeticProgression(start, stepSize, steps) {
-    return Array(steps).fill(0).reduce(
-        (prev, _, index) => {prev[index] = start + index*stepSize; return prev;},
-        []
-    );
-}
 function ShowList(props) {
     let items = [];
-    let {list, positions, spacing} = props;
+    let {list, positions, spacing, transitionDuration} = props;
     if (spacing) {
         positions = 
             ArithmeticProgression(0, spacing, list.length)
             .map(num => `${num}px`);
     }
-    console.log("Spacing:", spacing);
-    console.log(list);
-    console.log("Positions", positions);
+    //console.log("Spacing:", spacing);
+    //console.log(list);
+    //console.log("Positions", positions);
     for (let i = 0; i < list.length; i++) {
-        items.push(<Element key={i} top={positions[i]}>{list[i]}</Element>);
+        items.push(
+            <Element 
+                key={i} 
+                top={positions[i]}
+                transitionDuration={transitionDuration}>
+            {list[i]}</Element>);
     }
     return <div className="list" position="relative">{items}</div>;
 }
@@ -70,16 +76,38 @@ class List extends Component {
             [...props.list], this.props.test, this.props.swap
         );
         this.doAction = this.doAction.bind(this);
+        /* Will use these to check if there are any transitions
+         * happening.
+         */
+        this.activeTransitions = 0;
+        window.addEventListener('transitionend', () => {
+            console.log('transitionend', this.activeTransitions);
+            this.activeTransitions--;
+            // 2, because swaps involve moving two objects (unless we
+            // swap an element with itself, in which case this code
+            // breaks. But that shouldn't happen.
+            if (this.activeTransitions == -2) {
+                this.activeTransitions = 0;
+                console.log(this.activeTransitions);
+                this.doAction();
+            }
+        });
+    }
+
+    componentDidMount() {
+        console.log('Component Mounted');
+        console.log('Component Finished Mounting');
+        /* Have to leave time for the component to fully render, so
+         * that the swapping of elements during doAction causes a CSS
+         * transition.
+         */
+        window.setTimeout(this.doAction, 500);
     }
 
     /* This is going to do a test through the argsort list */
     test(i, j) {
         let {argsortList} = this.state;
         let {list} = this.props;
-        console.log(argsortList);
-        console.log(list);
-        console.log(i);
-        console.log(j);
         let result = this.props.test(
             list[argsortList[i]], list[argsortList[j]]);
         this.setState({});
@@ -97,10 +125,17 @@ class List extends Component {
     }
 
     doAction() {
-        let nextAction = this.actions.next();
-        if (nextAction.done) {
-            this.setState({done:true});
-            return;
+        let nextAction;
+        /* Right now, doAction has to force a CSS transition to occur,
+         * and tests don't cause those. Only swaps do.*/
+        while (true) {
+            nextAction = this.actions.next();
+            if (nextAction.done) {
+                this.setState({done:true});
+                return;
+            }
+            if (nextAction.value[0] == 'swap')
+                break;
         }
         nextAction = nextAction.value;
         if (nextAction[0] == 'test') {
@@ -113,10 +148,13 @@ class List extends Component {
     render () {
         let {positions} = this.state;
         let {list} = this.props;
-        console.log(positions);
-        let listComponent = <ShowList list={list} positions={positions}/>;
+        //console.log(positions);
+        let listComponent = (
+            <ShowList 
+                list={list} 
+                positions={positions}
+                transitionDuration={.3}/>);
         if (!this.state.done) {
-            window.setTimeout(this.doAction, 1000);
             return listComponent;
         }
         return (
@@ -148,7 +186,7 @@ class App extends Component {
     return (
         <div>
             <List
-                list={[5,4,3,2,1]}
+                list={[10,9,8,7,6,5,4,3,2,1]}
                 test={test}
                 swap={swap}/>
         </div>
