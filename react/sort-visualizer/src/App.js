@@ -16,10 +16,38 @@ function* bubbleSort(array, test, swap) {
 }
 
 
+function Element(props) {
+    let style = {
+        position : 'absolute',
+        top : props.top,
+        border : "solid #333",
+        padding : "10px",
+        transitionProperty : "top",
+        transitionDuration : "1.5s",
+    }
+    return <span style={style}>{props.children}</span>
+}
+function ArithmeticProgression(start, stepSize, steps) {
+    return Array(steps).fill(0).reduce(
+        (prev, _, index) => {prev[index] = start + index*stepSize; return prev;},
+        []
+    );
+}
 function ShowList(props) {
-    let items = props.list.map(
-        elem => <span className="item">{elem}</span>);
-    return <div className="list">{items}</div>;
+    let items = [];
+    let {list, positions, spacing} = props;
+    if (spacing) {
+        positions = 
+            ArithmeticProgression(0, spacing, list.length)
+            .map(num => `${num}px`);
+    }
+    console.log("Spacing:", spacing);
+    console.log(list);
+    console.log("Positions", positions);
+    for (let i = 0; i < list.length; i++) {
+        items.push(<Element key={i} top={positions[i]}>{list[i]}</Element>);
+    }
+    return <div className="list" position="relative">{items}</div>;
 }
 
 /* swap and test should be properties of this */
@@ -30,28 +58,42 @@ function ShowList(props) {
 class List extends Component {
     constructor(props) {
         super(props);
+        let positions = ArithmeticProgression(0, 50, props.list.length);
+        /* A list where each element is an index into props.list. */
+        let argsortList = ArithmeticProgression(0, 1, props.list.length);
         this.state = {
-            list : props.list,
+            argsortList : argsortList,
+            positions : positions,
             done : false
         };
         this.actions = bubbleSort(
             [...props.list], this.props.test, this.props.swap
         );
         this.doAction = this.doAction.bind(this);
-        console.log(this.state);
     }
 
+    /* This is going to do a test through the argsort list */
     test(i, j) {
-        let {list} = this.state;
-        let result = this.props.test(list[i], list[j]);
+        let {argsortList} = this.state;
+        let {list} = this.props;
+        console.log(argsortList);
+        console.log(list);
+        console.log(i);
+        console.log(j);
+        let result = this.props.test(
+            list[argsortList[i]], list[argsortList[j]]);
         this.setState({});
     }
+
+    /* This is going to force the position change, and keep an argsort
+     * list */
     swap(i, j) {
-        let list = [...this.state.list];
-        let temp = list[j];
-        list[j] = list[i];
-        list[i] = temp;
-        this.setState({list});
+        let argsortList = [...this.state.argsortList];
+        let positions = [...this.state.positions];
+        this.props.swap(argsortList, i, j);
+        //this.props.swap(positions, i, j);
+        this.props.swap(positions, argsortList[i], argsortList[j]);
+        this.setState({argsortList, positions});
     }
 
     doAction() {
@@ -67,25 +109,29 @@ class List extends Component {
             this.swap(nextAction[1], nextAction[2]);
         }
     }
+
     render () {
-        let list = <ShowList list={this.state.list}/>;
+        let {positions} = this.state;
+        let {list} = this.props;
+        console.log(positions);
+        let listComponent = <ShowList list={list} positions={positions}/>;
         if (!this.state.done) {
-            window.setTimeout(this.doAction, 400);
-            return list;
+            window.setTimeout(this.doAction, 1000);
+            return listComponent;
         }
         return (
             <div>
-                {list}
-                "Done!"
+                <div>
+                    {listComponent}
+                </div>
+                <div>
+                    "Done!"
+                </div>
             </div>
         );
     }
-    /*
-
-    */
-
-
 }
+
 
 function swap(array, i, j) {
     let temp = array[j];
@@ -111,3 +157,5 @@ class App extends Component {
 }
 
 export default App;
+
+
