@@ -225,19 +225,20 @@
  *   d   c
  *  / \    
  * a   b    
- *      \
- *       f
+ *    / \
+ *   f   g
  *        \
- *         g
+ *         h
  *          \
- *           h
+ *           i
  * What if we already knew that the leaf pair (c, f) was proof that
  * the tree was unbalanced? Do we really have to keep going until we
- * find the pair (c, h) (the leaves of minimum and maximum depth)? No,
+ * find the pair (c, i) (the leaves of minimum and maximum depth)? No,
  * that's stilly. Why do all that work?
- * If we could just... find the leaf of minimum depth 1st, and return
- * an answer as soon as we found another leaf of depth 2 more than the
- * leaf of minimum depth, then we could stop working immediately.
+ * If we could just... find the leaf of minimum depth first, and
+ * return an answer as soon as we found another leaf of depth 2 more
+ * than the leaf of minimum depth, then we could stop working
+ * immediately.
  *
  * Method 3.0:
  * - Search through the nodes of the tree in order of increasing
@@ -247,7 +248,7 @@
  *      - On the 1st node that we find, record it's depth. Continue
  *        searching through the other nodes of the tree.
  *      - Each time we explore a node:
- *          - Check of the node is a leaf.
+ *          - Check if the node is a leaf.
  *          - If the node is a leaf, check the depth of the node.
  *          - If the (currentNodeDepth - minDepth) > 1, then the tree
  *            is not balanced.
@@ -256,12 +257,148 @@
  *   away from the leaf of least depth, then the tree is balancd.
  *   Running time of method: O(nodes)
  *
- *   Interesting. The running time doesn't look any better than Method
- *   2.0 running time. But I made the argument that this method is
- *   better. Why?
+ * Interesting. The running time doesn't look any better than Method
+ * 2.0 running time. But I made the argument that this method is
+ * better. Why?
  *
- *   TODO: Explain average and best-case running times.
- *   TODO: Show BFS traversal of a tree.
+ * Well, Big-O notation is... an umbrella term for a lot of related
+ * but distinct things, unfortunately. Blame industry for mucking that
+ * up. In particular, Big-O notation tries to express how long a
+ * process will take, based on the size of it's input, IN THE WORST
+ * CASE. You don't HAVE to measure performance in terms of the worst
+ * case. What most people do is measure performance in three different
+ * cases:
+ * - Best case: the least possible steps the process can take to
+ *   finish.
+ * - Average case: The average number of steps that a process takes to
+ *   finish, where this average is taken over all the different
+ *   possibilities of inputs to the process.
+ * - Worst case: The largest number of steps that a process could take
+ *   to finish.
+ *
+ * At first blush, you might thing that this is weird. What cases are
+ * we considering? Since when could we make assumptions about what
+ * goes into the process? Why is anything but the worst case a good
+ * metric?  Anyone can build something that works well in a lucky case
+ * and performs like crap otherwise.
+ *
+ * What assumptions can we make about what goes into the process?
+ * The one thing you are NOT allowed to make assumptions about is the
+ * SIZE of the input. Obviously, the input should also satisfy any
+ * restrictions that the process places on the input (for our balance
+ * checking algorithm, we must give it a Node, because it expects a
+ * node). What we CAN play with is the structure and characteristics
+ * of the tree. 
+ *
+ * Why consider something other than the worst case?
+ * No one metric beats out the others. Having a low worst-case runtime
+ * is great, because you know that the process will never be slower
+ * than the worst case. However, think of this: suppose you had an
+ * algorithm whose best, average, and worst case running times were
+ * all the same. That means that... every possible case is the worst
+ * case. Does that sound right? Not in general, no. Sometimes, this
+ * may be unavoidable. All the cases might be equally hard, it
+ * happens. But there are times when it is not.
+ * That said, if there are problems where not all the cases should be
+ * worst cases, then you'd like your algorithm to take advantage of
+ * these easier cases, and actually spend less time working.
+ *
+ * For the following analyses, I will consider the size of the input
+ * to be the number of nodes in the tree.
+ *
+ * Best-Case Running Time of Method 3.0:
+ *
+ * The base-case time is actually O(1). Constant time. It's possible
+ * for this algorithm to finish within a number of steps that does not
+ * depend on the size of the tree. The second example tree is actually
+ * pretty close to the best possible case.
+ * One reason is that we're working with *binary trees*. The search
+ * method for 3.0, which is called a BREADTH-FIRST SEARCH, tends to
+ * perform well on trees that have a limited number of children per
+ * node.
+ *
+ * Here's a simple best case tree:
+ *
+ *       e
+ *      / \
+ *     c   d
+ *    /      
+ *   b        
+ *  /
+ * a
+ *
+ * This is a best-case tree for unbalanced trees with 5 nodes. We
+ * finish by exploring all the five nodes, which you'll notice is all
+ * the nodes in the tree. Sounds kinda wrong, doesn't it? Well, this
+ * is a small case. The reason this is a good case is that, so long as
+ * a tree has a structure pretty much like this, we'll only ever
+ * explore 5, or 6 nodes and then immediately return that the tree is
+ * not balanced.
+ *
+ * This can be a best case example for trees of larger size by making
+ * all nodes beyond the 1st 5 descendants of nodes b or c. It doesn't
+ * matter how we place new nodes under nodes b and c: this will always
+ * be an unbalanced tree, because depth(d) == 1, and depth(a) == 3.
+ *
+ * Here's an example of a larger tree:
+ *       e
+ *      / \
+ *     c   d
+ *    / \    
+ *   b   f    
+ *  / \   \
+ * a   g   .
+ *    / \   .
+ *   .   .   .
+ *  .     .
+ * .       .
+ *
+ * Where the dots mean that there could be any number of descendant
+ * nodes as children of g and f (including no children at all, which
+ * would make f and g leaves). For this example, we will assume f and
+ * g have children.
+ * In this case, the Method 3.0 would explore the nodes in the
+ * following order:
+ *      e, c, d, b, f, a
+ * The leaf of minimum depth is d, the next encountered leaf is a,
+ * which has depth 3. We know enough to say that the tree is
+ * unbalanaced, and we never looked at the children of f and g. No
+ * matter how large these trees are, we never explored more than 6
+ * nodes.
+ *
+ * Average Case Running Time:
+ * This can be difficult to compute. I'll tell you roughly how one
+ * does the average case running time, but I won't do it here, because
+ * I don't know how.
+ * - For a given, fixed size, n, you look at all of the different
+ *   trees of size n.
+ * - We assume that you're equally likely to get each tree as an
+ *   input.
+ * - Calculate the exact number of steps required to finish exploring
+ *   this tree. Let's call this quantity Time(tree).
+ * - Find Time(tree) for all possible trees of some size, and then
+ *   average up all of those times.
+ *
+ * I'm not sure how to figure out all the different possible trees of
+ * a given size, partially because the following two trees are
+ * different:
+ *
+ * Tree 1   |  Tree 2
+ * a        |      a
+ *  \       |     /
+ *   b      |    b
+ *    \     |   /
+ *     c    |  c
+ * 
+ * However, Time(tree) can be reasoned about. The running time has to
+ * do with the number of nodes one needs to explore before you
+ * encounter
+ * - A leaf of least depth.
+ * - An offending leaf.
+ *
+ * Based on that, one observation is obvious: all balanced trees are
+ * worst cases. You cannot determine that a tree is balanced until
+ * you've looked at all the nodes.
  */
 
 function pairs(list1, list2) {
@@ -279,7 +416,8 @@ function isLeaf(node) {
     //console.log(node);
     return (node.left === null && node.right === null);
 }
-/* A tree either has one node (a node with no children) or more than 1
+/* Explanation of leafDistancesOfTree:
+ * A tree either has one node (a node with no children) or more than 1
  * node.
  * - If a tree has 1 node, then it has 1 leaf.
  * - If a tree has more than 1 node, then the root of the tree has at
@@ -326,7 +464,11 @@ let Method_1_1 = {
          */
         function distancesFrom(root, distanceToOriginalRoot) {
             if (root === null) {
-                // There are no nodes in this tree. 
+                /* There are no nodes in this tree. 
+                 * Note that I'm respecting my postcondition at all
+                 * times: this function always returns a list of
+                 * distances of leaves.
+                 */
                 return [];
             } else if (isLeaf(root)) {
                 // This tree has just one leaf: it's root.
@@ -424,6 +566,13 @@ class Node {
 
 let testCases = [
     {
+        /* The first example tree:
+         *     e
+         *    / \
+         *   d   c
+         *  / \    
+         * a   b    
+         */
         testCase : 
             new Node("e",
                 new Node("d",
@@ -433,17 +582,30 @@ let testCases = [
         result : true
     },
     {
+        /* The second example tree:
+         *     e
+         *    / \
+         *   d   c
+         *  / \    
+         * a   b    
+         *    / \
+         *   f   g
+         *        \
+         *         h
+         *          \
+         *           i
+         */
         testCase :
             new Node("e",
                 new Node("d",
                     new Node("a", null, null),
                     new Node("b", 
-                        null,
-                        new Node("f", 
+                        new Node("f", null, null),
+                        new Node("g", 
                             null,
-                            new Node("g", 
+                            new Node("h", 
                                 null,
-                                new Node("h", null, null))))),
+                                new Node("i", null, null))))),
                 new Node("c", null, null)),
         result : false
     }
