@@ -55,8 +55,8 @@
  * children.
  *
  * When is a binary tree balanced?
- * A binary tree is balanced when no two nodes exist in the such that
- * their distance from the root differs by more than 1.
+ * A binary tree is balanced when no two leaf nodes exist in the such
+ * that their distance from the root differs by more than 1.
  *
  * What is distance?
  * Distance is how far away two nodes are from each other. Simply
@@ -148,13 +148,14 @@
  *   nodes to see if they do or do not have children. If they don't,
  *   they are a leaf. For each of these leaves, we also have to check
  *   the distance of this leaf from the root. For now, to make things
- *   simple, suppose that this is a constant-time operation, O(1).
+ *   simple, suppose that calculating a node's distance from the root
+ *   is a constant-time operation, O(1).
  *   Running time of this step: O(nodes) * O(1) = O(nodes)
  * - Now that we have a list of the depths, we iterate through all the
  *   pairs of them. How many different pairs are there? The answer is:
  *       (# leaves) * (# leaves) = (# leaves)^2
  *   We could iterate through less than this if we think more about
- *   what we're doing, but this isn't a good solution to start with.
+ *   what we're doing, but this isn't a clever solution to start with.
  *   Checking the difference of the distances is an O(1) operation.
  *   Runnimg time of this step: O(leaves ^ 2) * O(1) = O(leaves ^ 2)
  *
@@ -172,7 +173,7 @@
  * Start of METHOD 2:
  *
  * The previous method sucked. All the methods will deal, somehow,
- * with exploring the nodes of a tree and finding their distance. We
+ * with exploring the nodes of a tree and finding their depth. We
  * will never escape that (not with the current Node data structure we
  * have). So this method will try and reduce the number of pairs that
  * we have to check.
@@ -240,6 +241,17 @@
  * than the leaf of minimum depth, then we could stop working
  * immediately.
  *
+ * How would we find these leaves? How could we go about finding the
+ * leaf f before we find leaf i?
+ * - We can't skip straight to i, because we have to explore nodes e,
+ *   d, b, g, h first. We won't know about i until we explore all of
+ *   these other nodes first.
+ * - Thus, if we want to do the least amount of work, given a tree
+ *   like the above, then we should explore the nodes of the tree in
+ *   an order that makes finding leaves higher up on the tree easier.
+ *   We can search the nodes in order of INCREASING DEPTH. e, d, c, a,
+ *   b, f, g, h, i.
+ *
  * Method 3.0:
  * - Search through the nodes of the tree in order of increasing
  *   depth. That means we start off with the nodes closer to the root,
@@ -276,7 +288,7 @@
  * - Worst case: The largest number of steps that a process could take
  *   to finish.
  *
- * At first blush, you might thing that this is weird. What cases are
+ * At first blush, you might think that this is weird. What cases are
  * we considering? Since when could we make assumptions about what
  * goes into the process? Why is anything but the worst case a good
  * metric?  Anyone can build something that works well in a lucky case
@@ -288,14 +300,20 @@
  * restrictions that the process places on the input (for our balance
  * checking algorithm, we must give it a Node, because it expects a
  * node). What we CAN play with is the structure and characteristics
- * of the tree. 
+ * of the tree. Examples of this are:
+ * - Where leaves are located on the tree.
+ * - How many children are in each subtree of the root.
+ * - Generally, which nodes are connected to which other nodes.
+ *   Everything is fine so long as we are playing with a tree of the
+ *   correct size. We just assume some fixed-- but unknown-- size, and
+ *   make our arguments around that.
  *
  * Why consider something other than the worst case?
  * No one metric beats out the others. Having a low worst-case runtime
  * is great, because you know that the process will never be slower
  * than the worst case. However, think of this: suppose you had an
  * algorithm whose best, average, and worst case running times were
- * all the same. That means that... every possible case is the worst
+ * all the same. Thai means that... every possible case is the worst
  * case. Does that sound right? Not in general, no. Sometimes, this
  * may be unavoidable. All the cases might be equally hard, it
  * happens. But there are times when it is not.
@@ -308,7 +326,7 @@
  *
  * Best-Case Running Time of Method 3.0:
  *
- * The base-case time is actually O(1). Constant time. It's possible
+ * The best-case time is actually O(1). Constant time. It's possible
  * for this algorithm to finish within a number of steps that does not
  * depend on the size of the tree. The second example tree is actually
  * pretty close to the best possible case.
@@ -336,7 +354,7 @@
  * not balanced.
  *
  * This can be a best case example for trees of larger size by making
- * all nodes beyond the 1st 5 descendants of nodes b or c. It doesn't
+ * all nodes other than those first 5 descendants of nodes b or c. It doesn't
  * matter how we place new nodes under nodes b and c: this will always
  * be an unbalanced tree, because depth(d) == 1, and depth(a) == 3.
  *
@@ -398,7 +416,32 @@
  *
  * Based on that, one observation is obvious: all balanced trees are
  * worst cases. You cannot determine that a tree is balanced until
- * you've looked at all the nodes.
+ * you've looked at all the nodes. These algorithms for checking if a
+ * tree is balanced are better described as "failing to show that a
+ * tree is UNbalanced."
+ *
+ * Final Thoughts: This is not the end of the story.
+ * - There may be other, cleverer solutions to this problem, though I
+ *   am very sure that the worst case solution can never beat
+ *   O(nodes), not within the confines of this problem. Since we know
+ *   nothing about a tree except for the value of the root node, and
+ *   the roots of the two child trees, we must explore the nodes
+ *   to find the leaves, and for any balanced tree, we must exhaust
+ *   all possible leaf pairs before we can show that the tree is
+ *   balanced.
+ * - The confines of the problem can be changed! Think about what
+ *   possibilities might open up if you could CHANGE the data
+ *   structure. What if you made a new DS, somewhat like:
+ *      Tree {
+ *          value
+ *          left child,
+ *          right child,
+ *          list of leaf distances
+ *      }
+ *   What can you do now that checking the leaf distances is an O(1)
+ *   operation? What sacrifice(s) have you made by creating this
+ *   new data structure?
+ *
  */
 
 function pairs(list1, list2) {
@@ -449,6 +492,7 @@ function isLeaf(node) {
  * file. I'm abusing objects.
  */
 let Method_1_1 = {
+    name : "method 1.1",
     leafDistancesOfTree(tree) {
         /* This function gives us the distances of leaves in a tree,
          * relative to another tree's root. We assume that the root we
@@ -505,16 +549,20 @@ let Method_1_1 = {
 }
 
 let Method_2_0 = {
+    name : "method 2.0",
     leafDistancesOfTree : Method_1_1.leafDistancesOfTree,
     checkBalanced(tree) {
+        // Empty trees are balanced.
+        if (tree === null) return true;
         let distances = this.leafDistancesOfTree(tree);
         let leastDepth = Math.min(...distances);
-        let MostDepth = Math.max(...distances);
-        return Math.abs(MostDepth - leastDepth) > 1;
+        let mostDepth = Math.max(...distances);
+        return Math.abs(mostDepth - leastDepth) <= 1;
     }
 }
 
 let Method_3_0 = {
+    name : "method 3.0",
     checkBalanced(tree) {
         // The structure of each entry in nodesToExplore: 
         // [node, depth]. The root node of a tree has depth 0.
@@ -522,10 +570,12 @@ let Method_3_0 = {
         let minLeafFound = false;
         let leastDepth;
         while (nodesToExplore.length !== 0) {
+            // console.log(nodesToExplore);
             let toExplore = nodesToExplore[0];
             let node = toExplore[0];
             let currentDepth = toExplore[1];
             if (node === null) {
+                // console.log("Empty node found.");
                 // Nothing to explore here. This is not a leaf. This
                 // is a tree of no nodes. How do I know that it is a
                 // tree of no nodes? I chose it to be so. It makes
@@ -536,13 +586,17 @@ let Method_3_0 = {
                 // null means "empty tree".
                 nodesToExplore.shift();
             } else if (isLeaf(node) && !minLeafFound) {
-                let leastDepth = currentDepth;
-                let minLeafFound = true;
+                // console.log("Least depth leaf found!");
+                leastDepth = currentDepth;
+                minLeafFound = true;
+                nodesToExplore.shift();
             } else if (isLeaf(node)) {
+                // console.log("leaf found!");
                 if (Math.abs(currentDepth - leastDepth) > 1) return false;
                 // We no longer need to explore this node. Remove it.
                 else nodesToExplore.shift();
             } else {
+                // console.log("internal node found!");
                 // Explore the node's children. We place the children
                 // all the way at the end of nodesToExplore so that we
                 // explore nodes of greater depth last, keeping nodes
@@ -552,6 +606,7 @@ let Method_3_0 = {
                 nodesToExplore.push([node.right, currentDepth + 1]);
             }
         }
+        // console.log("Tree was balanced.");
         return true;
     }
 }
@@ -608,19 +663,27 @@ let testCases = [
                                 new Node("i", null, null))))),
                 new Node("c", null, null)),
         result : false
+    },
+    {
+        testCase : null,
+        result: true
     }
 ]
 
 function testMethod(testCases, method) {
+    let correct = true;
     for (testCase of testCases) {
         let expected = testCase.result;
-        let actual = Method_1_1.checkBalanced(testCase.testCase);
+        let actual = method.checkBalanced(testCase.testCase);
         if (actual !== expected) {
-            console.log(String(method) + " is incorrect!");
-            return false;
+            console.log(method.name + " is incorrect!");
+            console.log("case:", testCase.testCase);
+            console.log("expected:", expected)
+            console.log("actual:", actual)
+            correct = false;
         }
     }
-    return true;
+    return correct;
 }
 
 testMethod(testCases, Method_1_1);
