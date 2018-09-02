@@ -1,0 +1,7 @@
+compiled/
+*
+!*.pm?
+!*.rkt
+!Makefile
+!.gitignore
+*~
