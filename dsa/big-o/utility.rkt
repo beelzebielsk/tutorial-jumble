@@ -21,7 +21,7 @@
                         (module-path-index-resolve 
                           (syntax-source-module #'EXPR))))))
           "")
-        (format "(line ~a, col ~a): Expression ~a results in ~a"
+        (format "(line ~a, col ~a): Expression ~a results in ~v"
                 (syntax-line #'EXPR)
                 (syntax-column #'EXPR)
                 (if (> (string-length expr-string) expr-length)
@@ -43,6 +43,7 @@
             (map (lambda (e) (if (txexpr-element? e) e (~a e)))
                  lst)))
     (list-splice args)))
+
 (define-syntax let-splice
   (lambda (stx)
     (syntax-case stx ()
@@ -52,38 +53,49 @@
        #'(let ((id val) ...) 
            (list-splice body ...))])))
 
+(define (@-flatten txpr) 
+  (decode txpr
+          #:txexpr-proc (decode-flattener #:only '(@))))
+
+; TODO: Under construction macro, which will take a list of tag names
+; and create tag functions that output the empty string.
+
 ; }}} ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (number->bits num)
-  (if (< num 2)
-    (list num)
-    (append (number->bits (quotient num 2)) 
-            (list (remainder num 2)))))
-(define (enumerate lst)
-  (build-list (length lst) identity))
+; lambda? -> lambda?
+; This takes a procedure and alters it so that it is safe to use as
+; the #:txexpr-proc argument to the decode-elements function. It's a
+; temporary hack. The problem is that decode-elements functions like
+; decode, but it places the txexpr-elements? inside a temporary tag.
+; And this temporary tag is a vaid target of the #:txexpr-proc. This
+; can be very confusing.
+(define (make-d-el-proc proc)
+  (lambda (tx) 
+    (if (string-prefix? (symbol->string (get-tag tx)) "temp-tag") 
+      tx
+      (proc tx))))
+; list? list? -> lambda
+; Takes in one of two optional lists of tags: 
+; #:only, which specifies which tags to flatten and nothing else.
+; #:exclude, which specifies flattens all tags but those listed.
+; Returns a function that, when given as #:txexpr-proc in
+; pollen/decode, will flatten those tags and leave all others alone.
+(define (decode-flattener #:only [only-these (void)]
+                          #:exclude [except-these (void)])
+  (cond [(and (void? only-these) (void? except-these))
+         get-elements]
+        [(void? except-these)
+         (λ (tx) 
+            (if (ormap (λ (name) (is-tag? tx name)) only-these)
+              (get-elements tx)
+              tx))]
+        [else 
+          (λ (tx)
+             (if (ormap (λ (name) (is-tag? tx name)) except-these)
+               tx
+               (get-elements tx)))]))
+
 (define printable? (or/c string? number? symbol?))
-(define (reverse* val)
-  (cond [(null? val) val]
-        [(pair? val) (reverse (map reverse* val))]
-        [else val]))
-(define (my-flatten lst)
-  (foldl
-    (λ (cur prev)
-       (if (pair? cur)
-         (append prev (my-flatten cur))
-         (append prev (list cur))))
-    null lst))
-(define (tree-depth val)
-  (cond [(null? val) 0]
-        [(list? val)
-         (add1 (apply max (map tree-depth val)))]
-        [else 0]))
-(define (add-ns ns) 
-  (λ (tx) 
-     (txexpr
-       (string->symbol (format "~a:~a" ns (get-tag tx)))
-       (get-attrs tx)
-       (get-elements tx))))
 (define (is-tag? tag name)
   (and (txexpr? tag) (eq? (get-tag tag) name)))
 ; list? procedure? #:keep-where procedure? -> list?
@@ -122,9 +134,85 @@
 ;   to do something like directly supply the function
 ;   splitter-function wants, allowing them the greatest control over
 ;   the splitting method.
+;(define (splitter-func lst loop-body finally)
+  ;(define (iter current-split splits remaining)
+    ;(cond
+      ;[(null? remaining) (finally current-split splits)]
+      ;[else (call-with-values 
+              ;iter 
+              ;(loop-body current-split splits remaining))]))
+  ;(iter null null lst))
+;
+;(define (split-where lst [split-pred? #f]
+                     ;#:keep-where  [keep-pred? #f]
+                     ;#:split-map  [split-cun #f]
+                     ;#:action [loop-body #f]
+                     ;#:finally [finally #f])
+  ;(cond 
+    ;[(and loop-body finally) (splitter-func lst loop-body finally)]
+    ;[(not split-pred?) 
+     ;(error "Must provide either both #:action and #:finally or split-pred?")]
+    ;[else 
+      ;(let
+        ;([loop-body
+           ;(λ (current-split splits remaining)
+              ;(match-let
+                ;[((cons elem tail) remaining)]
+                ;(if (split-pred? elem current-split tail)
+                  ;(let* 
+                    ;[(decision (keep-pred? elem current-split
+                                           ;tail))
+                     ;(new-current-split
+                       ;(case decision
+                         ;[(next) (list elem)]
+                         ;[else null]))
+                     ;(final-current-split-contents
+                       ;(reverse
+                         ;(case decision
+                           ;[(current) (cons elem current-split)]
+                           ;[else current-split])))
+                     ;(processed-current-split
+                       ;(cond
+                         ;[(null? final-current-split-contents)
+                          ;final-current-split-contents]
+                         ;[split-func
+                           ;(split-func final-current-split-contents)]
+                         ;[else final-current-split-contents]))
+                     ;(new-splits
+                       ;(begin 
+                         ;(report decision)
+                         ;(if (eq? decision 'separate)
+                           ;(report (list elem processed-current-split))
+                           ;(void))
+                         ;(report 
+                           ;(case decision
+                             ;[(separate #t)
+                              ;(if (null? processed-current-split)
+                                ;(cons elem splits)
+                                ;(append (list elem processed-current-split)
+                                        ;splits))]
+                             ;[else
+                               ;(if (null? processed-current-split)
+                                 ;splits
+                                 ;(cons processed-current-split splits))]))))]
+                    ;(values new-current-split
+                            ;new-splits
+                            ;tail))
+                  ;(values (cons elem current-split)
+                          ;splits
+                          ;tail))))]
+         ;[finally
+           ;(λ (current-split splits)
+              ;(cond
+                ;[(null? current-split) splits]
+                ;[split-func (cons (split-func (reverse current-split))
+                                  ;splits)]
+                ;[else (cons (reverse current-split) splits)])
+
 (define (split-where lst split-pred? 
           #:keep-where [keep-pred? (λ _ #f)]
-          #:split-map [split-func #f])
+          #:split-map [split-func #f]
+          #:action [loop-body #f])
   (define (iter current-split splits remaining)
     (cond 
       [(null? remaining) 
@@ -153,25 +241,23 @@
                    [(null? final-current-split-contents)
                     final-current-split-contents]
                    [split-func
-                    (split-func final-current-split-contents)]
+                     (split-func final-current-split-contents)]
                    [else final-current-split-contents]))
                (new-splits
                  (begin 
-                   (report decision)
                    (if (eq? decision 'separate)
-                     (report (list elem processed-current-split))
+                     (list elem processed-current-split)
                      (void))
-                   (report 
-                     (case decision
-                       [(separate #t)
-                        (if (null? processed-current-split)
-                          (cons elem splits)
-                          (append (list elem processed-current-split)
-                                  splits))]
-                       [else
-                         (if (null? processed-current-split)
-                           splits
-                           (cons processed-current-split splits))]))))]
+                   (case decision
+                     [(separate #t)
+                      (if (null? processed-current-split)
+                        (cons elem splits)
+                        (append (list elem processed-current-split)
+                                splits))]
+                     [else
+                       (if (null? processed-current-split)
+                         splits
+                         (cons processed-current-split splits))])))]
               (iter new-current-split
                     new-splits
                     tail))
@@ -180,64 +266,11 @@
                   tail)))]))
   (reverse (iter null null lst)))
 
-; list? list? -> lambda
-; Takes in one of two optional lists of tags: 
-; #:only, which specifies which tags to flatten and nothing else.
-; #:exclude, which specifies flattens all tags but those listed.
-; Returns a function that, when given as #:txexpr-proc in
-; pollen/decode, will flatten those tags and leave all others alone.
-(define (decode-flattener #:only [only-these (void)]
-                          #:exclude [except-these (void)])
-  (cond [(and (void? only-these) (void? except-these))
-         get-elements]
-        [(void? except-these)
-         (λ (tx) 
-            (if (ormap (λ (name) (is-tag? tx name)) only-these)
-              (get-elements tx)
-              tx))]
-        [else 
-          (λ (tx)
-             (if (ormap (λ (name) (is-tag? tx name)) except-these)
-               tx
-               (get-elements tx)))]))
-
-                        
-; The difference between flatten and what I'm going for is that I'm
-; not going to flatten everything.
-; If I assume that the only tag left are math tags, which means that
-; the document now looks like:
-;   ('root (or/c string? math-tag?) ...)
-; And that math tags may contain either strings or other math-tags,
-; then all I'm really trying to do is call a special flatten on all
-; the math tags. It's a txexpr-flatten which includes only the
-; elements of the expression within the parent expression.
-;
-; If I wait until the absolute last moment to handle the math nesting,
-; then one interesting consequence of this is that all the "top-level"
-; math tags will necessarily be children of the root tag. This is
-; because if the 'root tag has a tag as a child at this point, the
-; only remaining tags at this point are math tags.
-
-; ensure-math should expand to math, unless inside of a math tag.
-; Can be accomplished through syntax parameters.
-; ensure-math will be syntax parameter which expands to a math tag.
-; math tags change that syntax parameter to be something
-; inconsequential.
-(define (math-process xexpr)
-  (cond [(report (is-tag? (report xexpr) 'math))
-         (list-splice
-           `($
-              ,@(decode-elements 
-                 (get-elements xexpr)
-                 #:txexpr-proc (decode-flattener #:only '(ensure-math)))
-              $))]
-        ; We know that this is not contained within a math tag, for if
-        ; it were, the above branch would have been taken already, and
-        ; decode would've been applied to this tag.
-        [(is-tag? xexpr 'ensure-math)
-         (math-process (txexpr 'math null (get-elements xexpr)))]
-        [(txexpr? xexpr)
-         (map (lambda (e) (if (txexpr? e) (math-process e) e)) xexpr)]
-        [else xexpr]))
+(define (reverse* val [leaf? (λ (v) (not (list? v)))])
+  (define (helper val)
+    (if (leaf? val)
+      val
+      (reverse (map helper val))))
+  (helper val))
 
 (provide (all-defined-out))

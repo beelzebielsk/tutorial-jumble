@@ -1,4 +1,4 @@
-racketFiles := $(wildcard %.rkt)
+racketFiles := $(wildcard *.rkt)
 
 all : listings
 
