@@ -25,9 +25,9 @@
  */
 
 /* SHORT INTRO TO TREES:
- * There's a lot of different ways to do this. Doing it always starts
- * out the same, no matter how you do it: make sure you understand
- * the problem.
+ * There's a lot of different ways to do this problem. Doing it always
+ * starts out the same, no matter how you do it: make sure you
+ * understand the problem.
  *
  * What is a tree?
  * A tree is a collection of nodes, and information about which nodes
@@ -153,11 +153,14 @@
  *   Running time of this step: O(nodes) * O(1) = O(nodes)
  * - Now that we have a list of the depths, we iterate through all the
  *   pairs of them. How many different pairs are there? The answer is:
- *       (# leaves) * (# leaves) = (# leaves)^2
- *   We could iterate through less than this if we think more about
- *   what we're doing, but this isn't a clever solution to start with.
- *   Checking the difference of the distances is an O(1) operation.
- *   Runnimg time of this step: O(leaves ^ 2) * O(1) = O(leaves ^ 2)
+ *       (# leaves) * (# leaves - 1) = (# leaves)^2
+ *   It's (# leaves - 1) on the second term because we don't want to
+ *   pair a leaf with itself; the pairs we care about are pairs of
+ *   different leaves. We could iterate through less than this if we
+ *   think more about what we're doing, but this isn't a clever
+ *   solution to start with.  Checking the difference of the distances
+ *   is an O(1) operation.  Runnimg time of this step: O(leaves ^ 2) *
+ *   O(1) = O(leaves ^ 2)
  *
  * Total Running time: O(nodes) + O(leaves ^ 2)
  * NOTE: One running time does not dominate the other because they are
@@ -257,7 +260,7 @@
  *   depth. That means we start off with the nodes closer to the root,
  *   look through all of those, then look through the nodes further
  *   away from the root.
- *      - On the 1st node that we find, record it's depth. Continue
+ *      - On the 1st leaf that we find, record it's depth. Continue
  *        searching through the other nodes of the tree.
  *      - Each time we explore a node:
  *          - Check if the node is a leaf.
@@ -305,7 +308,7 @@
  * - How many children are in each subtree of the root.
  * - Generally, which nodes are connected to which other nodes.
  *   Everything is fine so long as we are playing with a tree of the
- *   correct size. We just assume some fixed-- but unknown-- size, and
+ *   correct size. We just assume some fixed---but unknown---size, and
  *   make our arguments around that.
  *
  * Why consider something other than the worst case?
@@ -313,7 +316,7 @@
  * is great, because you know that the process will never be slower
  * than the worst case. However, think of this: suppose you had an
  * algorithm whose best, average, and worst case running times were
- * all the same. Thai means that... every possible case is the worst
+ * all the same. This means that... every possible case is the worst
  * case. Does that sound right? Not in general, no. Sometimes, this
  * may be unavoidable. All the cases might be equally hard, it
  * happens. But there are times when it is not.
@@ -333,7 +336,8 @@
  * One reason is that we're working with *binary trees*. The search
  * method for 3.0, which is called a BREADTH-FIRST SEARCH, tends to
  * perform well on trees that have a limited number of children per
- * node.
+ * node (2 children is as limited as you can get and still be
+ * interesting).
  *
  * Here's a simple best case tree:
  *
@@ -354,9 +358,10 @@
  * not balanced.
  *
  * This can be a best case example for trees of larger size by making
- * all nodes other than those first 5 descendants of nodes b or c. It doesn't
- * matter how we place new nodes under nodes b and c: this will always
- * be an unbalanced tree, because depth(d) == 1, and depth(a) == 3.
+ * all nodes (other than those first 5) descendants of nodes b or c.
+ * It doesn't matter how we place new nodes under nodes b and c: this
+ * will always be an unbalanced tree, because depth(d) == 1, and
+ * depth(a) == 3.
  *
  * Here's an example of a larger tree:
  *       e
@@ -420,6 +425,106 @@
  * tree is balanced are better described as "failing to show that a
  * tree is UNbalanced."
  *
+ * Method 3.1:
+ *
+ * You can actually do a little bit better here. Take a case we've
+ * considered before
+ *
+ *     e
+ *    / \
+ *   d   c
+ *  / \    
+ * a   b    
+ *      \
+ *       g
+ *        \
+ *         h
+ *          \
+ *           i
+ *
+ * If we did a BFS, then we'd encounter the leaf "c", pretty early.
+ * Note that the only pair that shows the tree is unbalanced is the
+ * leaf pair (c, i). Here's a question: if we already know about the
+ * depth of c (1), do we really have to find where "i" in order to
+ * know that the tree's unbalanced?
+ *
+ * Here's another way to put it: suppose this was our tree:
+ *
+ *     e
+ *    / \
+ *   d   c
+ *  / \    
+ * a   b    
+ *      \
+ *       g
+ *        \
+ *         h
+ *          \
+ *           i
+ *            \
+ *             .
+ *              .
+ *               .
+ *
+ * You're not sure how many nodes are in the right subtree of i, but
+ * suppose it's very large. Is there any reason to have to explore the
+ * rest of that subtree to understand that the tree is balanced? NO.
+ * The reason is because every tree has a leaf. The depth of any leaf
+ * in a tree is always at least the depth of the tree's root. Thus
+ * once we find that the depth of g is 3, we no longer need to check
+ * the rest of the tree. Once we find a leaf in any of the subtrees of
+ * g, we know that the depth of that leaf will be at least 3, and
+ * since the depth of c is at least 1, the tree must be unbalanced.
+ *
+ * So what changed between the previous method and this method? We
+ * noticed that all you have to do is show that an offending pair
+ * EXISTS. You don't have to produce the pair. So you can save time by
+ * cutting your work short as soon as you've found evidence that the
+ * tree is unbalanced, even if you haven't found the specific pair of
+ * leaves which shows that it is so. To sum up the algorithm:
+ *
+ * - Explore the nodes of the tree in a BFS manner. Make note of the
+ *   minimum and maximum depths of leaves found so far.
+ *      - NOTE: Of the min and max depth, the minimum depth leaf will
+ *        be found first, since that's closest to the root, and we're
+ *        exploring in order to increasing distance from the root
+ *        (that's what BFS does).
+ * - Check the depth of each node that you find:
+ *      - If you haven't found a leaf of minimum depth, and the
+ *        current node is a leaf, then the current node is the leaf of
+ *        minimum depth (a property of BFS).
+ *      - If you have found a leaf of minimum depth, and the current
+ *        node has a depth that's 2 or greater than the node of
+ *        minimum depth, then the tree is unbalanced, regardless of
+ *        whether or not the current node is a leaf.
+ *
+ * Running Time Analysis:
+ * - Worst-Case: O(nodes). The worst case is still a balanced tree.
+ *   You'll have to explore every node and fail to find nodes of depth
+ *   that differ by 2 or more.
+ * - Best-Case: O(1). For any tree with a leaf at depth 1, you
+ *   shouldn't have to explore more than 6 nodes. The following is a
+ *   best-case tree. Nodes b and a do not have to be leaves. They can
+ *   have subtrees of arbitrary depth and the algorithm will still run
+ *   in constant-time.
+ *
+ *     f
+ *    / \
+ *   e   d
+ *  / \    
+ * b   c    
+ *      \
+ *       a
+ *
+ * - Average-Case: I'm still not sure of this. The problem with this
+ *   analysis is that you have to explore all the different
+ *   configurations of a binary tree with some amount of nodes, and
+ *   then figure out the running-time of the algo on these different
+ *   trees, and average up the running time. The most I can say is
+ *   that the primary factors which determine running time are whether
+ *   or not the tree is balanced, and the depth of the least-deep
+ *   leaf (which are somewhat related factors). 
+ *
  * Final Thoughts: This is not the end of the story.
  * - There may be other, cleverer solutions to this problem, though I
  *   am very sure that the worst case solution can never beat
@@ -441,6 +546,13 @@
  *   What can you do now that checking the leaf distances is an O(1)
  *   operation? What sacrifice(s) have you made by creating this
  *   new data structure?
+ *   This sort of question is really at the heart of Data Structures.
+ *   This is why you study the area. People like you have to decide on
+ *   a data structure that makes common actions easy and fast to do.
+ *   How much easier would a choice like maintaining a list of leaf
+ *   distances with the tree make the problem? How difficult would it
+ *   make anything else that you'd like to do, like adding or removing
+ *   nodes from the tree? Are there better structures?
  *
  */
 
